@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Starify - AI Coding Assistant</title>
+    <link rel="stylesheet" href="llm.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Add these styles to your existing CSS */
+        .memory-item-title {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+        }
+        
+        .rename-input {
+            width: 100%;
+            background: rgba(138, 43, 226, 0.1);
+            border: 1px solid #8A2BE2;
+            border-radius: 4px;
+            color: white;
+            padding: 4px 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+        }
+        
+        .rename-input:focus {
+            outline: none;
+            background: rgba(138, 43, 226, 0.2);
+        }
+        
+        .rename-buttons {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+        }
+        
+        .rename-btn {
+            background: rgba(138, 43, 226, 0.3);
+            border: none;
+            border-radius: 4px;
+            color: white;
+            padding: 3px 6px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .rename-btn:hover {
+            background: rgba(138, 43, 226, 0.5);
+        }
+
+        /* Exit button styles */
+        .exit-btn {
+            background: #dc2626;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .exit-btn:hover {
+            background: #b91c1c;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+        }
+        
+        .exit-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Logo styling from Smart Code Hub */
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+        }
+
+        .logo-icon {
+            position: relative;
+        }
+
+        .logo-icon i {
+            width: 2rem;
+            height: 2rem;
+            color: #60a5fa;
+            transition: all 0.3s ease;
+        }
+
+        .logo-container:hover .logo-icon i {
+            color: #93c5fd;
+            transform: rotate(12deg) scale(1.1);
+        }
+
+        .logo-glow {
+            position: absolute;
+            inset: 0;
+            background-color: rgba(96, 165, 250, 0.2);
+            border-radius: 50%;
+            filter: blur(12px);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .logo-container:hover .logo-glow {
+            opacity: 1;
+        }
+
+        .logo-text {
+            display: flex;
+            align-items: center;
+        }
+
+        .logo-text span {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #60a5fa, #a78bfa, #60a5fa);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .logo-dot {
+            width: 0.5rem;
+            height: 0.5rem;
+            background-color: #34d399;
+            border-radius: 50%;
+            margin-left: 0.5rem;
+            animation: bounce 1s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        .edit-btn {
+            background: none;
+            border: none;
+            color: #60a5fa;
+            cursor: pointer;
+            padding: 2px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .memory-item:hover .edit-btn {
+            opacity: 1;
+        }
+
+        .edit-btn:hover {
+            color: #93c5fd;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="logo-container">
+            <div class="logo-icon">
+                <i data-lucide="code-2"></i>
+                <div class="logo-glow"></div>
+            </div>
+            <div class="logo-text">
+                <span>Smart Starify</span>
+                <div class="logo-dot"></div>
+            </div>
+        </div>
+        
+        <nav class="nav-links">
+            <button class="exit-btn" onclick="goBack()">
+                <i class="fas fa-arrow-left"></i>
+                Exit
+            </button>
+        </nav>
+    </div>
+
+    <!-- Voice Indicator -->
+    <div class="voice-indicator" id="voiceIndicator">
+        <div class="voice-pulse" style="background: var(--blue-400);"></div>
+        <span>Listening... Speak now</span>
+    </div>
+
+    <div class="chat-container">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">
+                    <i class="fas fa-brain"></i>
+                    Memory & Chats
+                </div>
+                <button class="new-chat-btn" onclick="createNewChat()">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14M5 12h14"/>
+                    </svg>
+                    New Chat
+                </button>
+            </div>
+            
+            <div class="memory-list" id="memoryList">
+                <!-- Memory items will be populated here -->
+            </div>
+            
+            <div class="sidebar-footer">
+                <div class="connection-status">
+                    <span class="connection-dot connected" id="connectionDot"></span>
+                    <span id="connectionStatus">Connected to Smart Starify</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Chat Area -->
+        <div class="main-chat">
+            <div class="chat-header">
+                <button class="toggle-sidebar-btn" onclick="toggleSidebar()">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                </button>
+                <h1 class="chat-title">Smart Starify AI</h1>
+                <div style="width: 40px;"></div>
+            </div>
+
+            <div class="messages-container" id="messagesContainer">
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-state-content">
+                        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" style="margin: 0 auto 20px;">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                            <path d="M13 8H7"/>
+                            <path d="M17 12H7"/>
+                        </svg>
+                        <h2>How can I help you code today?</h2>
+                        <p>Start a conversation by typing a message or using voice input</p>
+                        <p style="margin-top: 25px; color: #93c5fd; font-weight: 500;">Try asking:</p>
+                        <ul>
+                            <li>"Explain how quicksort works with Python examples"</li>
+                            <li>"Fix this JavaScript function that's not working"</li>
+                            <li>"How to implement a binary search tree in C++?"</li>
+                            <li>"Debug this Python code for matrix multiplication"</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="messages-list" id="messagesList" style="display: none;">
+                    <!-- Messages will be populated here -->
+                </div>
+            </div>
+
+            <div class="input-area">
+                <div class="input-container">
+                    <div class="input-wrapper">
+                        <div class="input-field-container">
+                            <textarea 
+                                class="input-field" 
+                                id="messageInput" 
+                                placeholder="Message Smart Starify or use voice input..." 
+                                rows="1"
+                                onkeydown="handleKeyPress(event)"
+                                oninput="adjustTextareaHeight(this)"
+                            ></textarea>
+                            <div class="input-actions">
+                                <button class="voice-btn" id="voiceBtn" onclick="toggleVoiceRecognition()">
+                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                                        <line x1="12" x2="12" y1="19" y2="22"/>
+                                        <line x1="8" x2="16" y1="22" y2="22"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <button class="stop-btn" id="stopBtn" onclick="stopGeneration()">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="6" y="6" width="12" height="12" rx="1" ry="1"/>
+                            </svg>
+                        </button>
+                        <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 2 11 13"/>
+                                <path d="M22 2 15 22 11 13 2 9z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="input-help">
+                        Press Enter to send, Shift+Enter for new line. Click the mic to use voice input.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let chats = [];
+        let currentChatId = null;
+        let isLoading = false;
+        let isListening = false;
+        let recognition = null;
+        let sidebarOpen = true;
+        let socket = null;
+        let isConnected = false;
+        let generationStopped = false;
+        const MAX_CONTEXT_MESSAGES = 6; // Manage context window size
+
+        // NEW FUNCTION: Go back to previous page
+        function goBack() {
+            if (document.referrer) {
+                window.history.back();
+            } else {
+                // If no referrer, redirect to home or show message
+                window.location.href = '/'; // Change to your home URL
+            }
+        }
+
+        // Initialize app
+        function init() {
+            initSpeechRecognition();
+            loadChatsFromStorage();
+            updateChatHistory();
+            document.getElementById('messageInput').focus();
+            updateConnectionStatus();
+        }
+
+        // Initialize speech recognition
+        function initSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    const input = document.getElementById('messageInput');
+                    input.value = transcript;
+                    adjustTextareaHeight(input);
+                    setListening(false);
+                    
+                    // Update send button state
+                    updateSendButton();
+                    
+                    // Focus input and move cursor to end
+                    input.focus();
+                    input.setSelectionRange(input.value.length, input.value.length);
+                    
+                    // Hide voice indicator
+                    document.getElementById('voiceIndicator').classList.remove('active');
+                };
+
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error', event.error);
+                    setListening(false);
+                    showNotification('Voice recognition error: ' + event.error, 'error');
+                    document.getElementById('voiceIndicator').classList.remove('active');
+                };
+
+                recognition.onend = function() {
+                    setListening(false);
+                    document.getElementById('voiceIndicator').classList.remove('active');
+                };
+            } else {
+                showNotification('Speech recognition is not supported in your browser', 'warning');
+            }
+        }
+
+        // Update connection status display
+        function updateConnectionStatus() {
+            const statusDot = document.getElementById('connectionDot');
+            const statusText = document.getElementById('connectionStatus');
+            
+            if (isConnected) {
+                statusDot.className = 'connection-dot connected';
+                statusText.textContent = 'Connected to Smart Starify';
+            } else {
+                statusDot.className = 'connection-dot disconnected';
+                statusText.textContent = 'Disconnected from Smart Starify';
+            }
+        }
+
+        // Local storage functions
+        function saveChatsToStorage() {
+            localStorage.setItem('smart-starify-chats', JSON.stringify(chats));
+            localStorage.setItem('smart-starify-current', currentChatId);
+        }
+
+        function loadChatsFromStorage() {
+            const savedChats = localStorage.getItem('smart-starify-chats');
+            const savedCurrent = localStorage.getItem('smart-starify-current');
+            
+            if (savedChats) {
+                chats = JSON.parse(savedChats);
+                currentChatId = savedCurrent;
+            } else {
+                // Initialize with sample chats
+                const now = new Date();
+                const sampleChats = [
+                    {
+                        id: Date.now().toString(),
+                        title: "Quicksort Algorithm",
+                        messages: [
+                            {
+                                id: Date.now().toString(),
+                                content: "Can you explain how quicksort works?",
+                                role: "user",
+                                timestamp: new Date(now - 15*60000).toISOString(),
+                                isComplete: true
+                            },
+                            {
+                                id: (Date.now() + 1).toString(),
+                                content: "Quicksort is a divide-and-conquer algorithm that works by selecting a 'pivot' element and partitioning other elements into two sub-arrays.\n\n```python\ndef quicksort(arr):\n    if len(arr) <= 1:\n        return arr\n    pivot = arr[len(arr) // 2]\n    left = [x for x in arr if x < pivot]\n    middle = [x for x in arr if x == pivot]\n    right = [x for x in arr if x > pivot]\n    return quicksort(left) + middle + quicksort(right)\n```\n\nTime complexity: O(n log n) average, O(n²) worst case.",
+                                role: "assistant",
+                                timestamp: new Date(now - 14*60000).toISOString(),
+                                isComplete: true
+                            }
+                        ],
+                        createdAt: new Date(now - 15*60000).toISOString(),
+                        status: 'completed'
+                    },
+                    {
+                        id: (Date.now() + 2).toString(),
+                        title: "Binary Search Tree",
+                        messages: [
+                            {
+                                id: Date.now().toString(),
+                                content: "How to implement a binary search tree in Python?",
+                                role: "user",
+                                timestamp: new Date(now - 45*60000).toISOString(),
+                                isComplete: true
+                            },
+                            {
+                                id: (Date.now() + 1).toString(),
+                                content: "Here's a complete BST implementation:\n\n```python\nclass Node:\n    def __init__(self, key):\n        self.left = None\n        self.right = None\n        self.val = key\n\nclass BST:\n    def __init__(self):\n        self.root = None\n\n    def insert(self, key):\n        if self.root is None:\n            self.root = Node(key)\n        else:\n            self._insert(self.root, key)\n\n    def _insert(self, node, key):\n        if key < node.val:\n            if node.left is None:\n                node.left = Node(key)\n            else:\n                self._insert(node.left, key)\n        else:\n            if node.right is None:\n                node.right = Node(key)\n            else:\n                self._insert(node.right, key)\n```",
+                                role: "assistant",
+                                timestamp: new Date(now - 44*60000).toISOString(),
+                                isComplete: true
+                            }
+                        ],
+                        createdAt: new Date(now - 45*60000).toISOString(),
+                        status: 'completed'
+                    }
+                ];
+                chats = sampleChats;
+                currentChatId = sampleChats[0].id;
+                saveChatsToStorage();
+            }
+        }
+
+        // Chat management
+        function createNewChat() {
+            const newChat = {
+                id: Date.now().toString(),
+                title: 'New Chat',
+                messages: [],
+                createdAt: new Date().toISOString(),
+                status: 'active'
+            };
+            
+            chats.unshift(newChat);
+            currentChatId = newChat.id;
+            
+            saveChatsToStorage();
+            updateChatHistory();
+            updateMessagesDisplay();
+            
+            document.getElementById('messageInput').focus();
+        }
+
+        function selectChat(chatId) {
+            currentChatId = chatId;
+            saveChatsToStorage();
+            updateChatHistory();
+            updateMessagesDisplay();
+        }
+
+        function deleteChat(chatId, event) {
+            event.stopPropagation(); // Prevent triggering the chat selection
+            
+            // Find the chat index
+            const chatIndex = chats.findIndex(chat => chat.id === chatId);
+            if (chatIndex === -1) return;
+            
+            // Remove the chat
+            chats.splice(chatIndex, 1);
+            
+            // If we deleted the current chat, create a new one
+            if (currentChatId === chatId) {
+                if (chats.length > 0) {
+                    currentChatId = chats[0].id;
+                } else {
+                    createNewChat();
+                }
+            }
+            
+            saveChatsToStorage();
+            updateChatHistory();
+            updateMessagesDisplay();
+            
+            showNotification("Chat deleted", "success");
+        }
+
+        // NEW FUNCTION: Rename chat based on user message
+        function renameChatBasedOnMessage(chatId, message) {
+            const chat = chats.find(c => c.id === chatId);
+            if (!chat) return;
+            
+            // Extract potential title from message
+            let newTitle = "New Chat";
+            
+            // If message is a question, use the question as title
+            if (message.includes('?')) {
+                const questionMatch = message.match(/(.{1,50}\?)/);
+                if (questionMatch) {
+                    newTitle = questionMatch[0];
+                } else {
+                    newTitle = message.substring(0, 15) + (message.length > 15 ? '...' : '');
+                }
+            } 
+            // If message mentions specific technologies or topics
+            else if (message.toLowerCase().includes('python') || 
+                     message.toLowerCase().includes('javascript') || 
+                     message.toLowerCase().includes('java') || 
+                     message.toLowerCase().includes('c++') ||
+                     message.toLowerCase().includes('algorithm')) {
+                
+                // Extract key terms for the title
+                const keyTerms = [];
+                
+                if (message.toLowerCase().includes('python')) keyTerms.push('Python');
+                if (message.toLowerCase().includes('javascript')) keyTerms.push('JavaScript');
+                if (message.toLowerCase().includes('java')) keyTerms.push('Java');
+                if (message.toLowerCase().includes('c++')) keyTerms.push('C++');
+                if (message.toLowerCase().includes('algorithm')) keyTerms.push('Algorithm');
+                if (message.toLowerCase().includes('function')) keyTerms.push('Function');
+                if (message.toLowerCase().includes('debug')) keyTerms.push('Debug');
+                if (message.toLowerCase().includes('explain')) keyTerms.push('Explanation');
+                if (message.toLowerCase().includes('implement')) keyTerms.push('Implementation');
+                
+                newTitle = keyTerms.join(' ') + ' Discussion';
+                
+                // Fallback if no key terms were found
+                if (keyTerms.length === 0) {
+                    newTitle = message.substring(0, 15) + (message.length > 15 ? '...' : '');
+                }
+            } 
+            // Default: use first 50 characters of the message
+            else {
+                newTitle = message.substring(0, 15) + (message.length > 15? '...' : '');
+            }
+            
+            // Update the chat title
+            chat.title = newTitle;
+            
+            // Save and update UI
+            saveChatsToStorage();
+            updateChatHistory();
+        }
+
+        // NEW FUNCTION: Manual chat renaming
+        function startRenamingChat(chatId, event) {
+            event.stopPropagation();
+            
+            const chatItem = document.querySelector(`.memory-item[data-chat-id="${chatId}"]`);
+            if (!chatItem) return;
+            
+            const titleElement = chatItem.querySelector('.memory-item-title');
+            const currentTitle = titleElement.textContent;
+            
+            // Create input field
+            titleElement.innerHTML = `
+                <input type="text" class="rename-input" value="${currentTitle}" onkeydown="handleRenameKeydown(event, '${chatId}')">
+                <div class="rename-buttons">
+                    <button class="rename-btn" onclick="confirmRename('${chatId}')">Save</button>
+                    <button class="rename-btn" onclick="cancelRename('${chatId}', '${currentTitle.replace(/'/g, "\\'")}')">Cancel</button>
+                </div>
+            `;
+            
+            // Focus the input
+            const input = titleElement.querySelector('.rename-input');
+            input.focus();
+            input.select();
+        }
+
+        // NEW FUNCTION: Handle key events during renaming
+        function handleRenameKeydown(event, chatId) {
+            if (event.key === 'Enter') {
+                confirmRename(chatId);
+            } else if (event.key === 'Escape') {
+                const chat = chats.find(c => c.id === chatId);
+                if (chat) {
+                    cancelRename(chatId, chat.title);
+                }
+            }
+        }
+
+        // NEW FUNCTION: Confirm chat rename
+        function confirmRename(chatId) {
+            const chatItem = document.querySelector(`.memory-item[data-chat-id="${chatId}"]`);
+            if (!chatItem) return;
+            
+            const input = chatItem.querySelector('.rename-input');
+            const newTitle = input.value.trim() || 'New Chat';
+            
+            // Update the chat title
+            const chat = chats.find(c => c.id === chatId);
+            if (chat) {
+                chat.title = newTitle;
+                saveChatsToStorage();
+                updateChatHistory();
+            }
+        }
+
+        // NEW FUNCTION: Cancel chat rename
+        function cancelRename(chatId, originalTitle) {
+            const chatItem = document.querySelector(`.memory-item[data-chat-id="${chatId}"]`);
+            if (!chatItem) return;
+            
+            const titleElement = chatItem.querySelector('.memory-item-title');
+            titleElement.textContent = originalTitle;
+        }
+
+        function getCurrentChat() {
+            return chats.find(chat => chat.id === currentChatId);
+        }
+
+        // Get context messages for current chat
+        function getContextMessages() {
+            const currentChat = getCurrentChat();
+            if (!currentChat || !currentChat.messages) return [];
+            
+            // Return the last N messages for context
+            return currentChat.messages.slice(-MAX_CONTEXT_MESSAGES);
+        }
+
+        // UI Updates
+        function updateChatHistory() {
+            const historyContainer = document.getElementById('memoryList');
+            historyContainer.innerHTML = '';
+            
+            chats.forEach(chat => {
+                const chatItem = document.createElement('button');
+                chatItem.className = `memory-item ${chat.id === currentChatId ? 'active' : ''}`;
+                chatItem.setAttribute('data-chat-id', chat.id);
+                chatItem.onclick = () => selectChat(chat.id);
+                
+                let statusIcon = '';
+                if (chat.status === 'processing') {
+                    statusIcon = '<span class="memory-status"><i class="fas fa-spinner fa-spin" style="color: #3b82f6;"></i></span>';
+                } else if (chat.status === 'completed') {
+                    statusIcon = '<span class="memory-status"><i class="fas fa-check-circle" style="color: #10b981;"></i></span>';
+                } else if (chat.status === 'stopped') {
+                    statusIcon = '<span class="memory-status"><i class="fas fa-stop-circle" style="color: #ef4444;"></i></span>';
+                }
+                
+                chatItem.innerHTML = `
+                    <div class="memory-item-title">${chat.title}</div>
+                    <div class="memory-item-date">${formatDate(new Date(chat.createdAt))}</div>
+                    <div class="memory-actions">
+                        <button class="edit-btn" onclick="startRenamingChat('${chat.id}', event)">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="delete-btn" onclick="deleteChat('${chat.id}', event)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    ${statusIcon}
+                `;
+                
+                historyContainer.appendChild(chatItem);
+            });
+        }
+
+        function updateMessagesDisplay() {
+            const currentChat = getCurrentChat();
+            const emptyState = document.getElementById('emptyState');
+            const messagesList = document.getElementById('messagesList');
+            
+            if (!currentChat || currentChat.messages.length === 0) {
+                emptyState.style.display = 'flex';
+                messagesList.style.display = 'none';
+                messagesList.innerHTML = '';
+            } else {
+                emptyState.style.display = 'none';
+                messagesList.style.display = 'block';
+                
+                messagesList.innerHTML = '';
+                currentChat.messages.forEach(message => {
+                    const messageElement = createMessageElement(message);
+                    messagesList.appendChild(messageElement);
+                });
+            }
+            
+            scrollToBottom();
+        }
+
+        function createMessageElement(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${message.role} fade-in`;
+            messageDiv.id = `message-${message.id}`;
+            
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = `message-avatar ${message.role}`;
+            avatarDiv.textContent = message.role === 'user' ? 'U' : 'AI';
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = 'message-bubble';
+            
+            // If it's an assistant message with no content, show typing animation
+            if (message.role === 'assistant' && message.content === '') {
+                bubbleDiv.innerHTML = `
+                    <div class="typing-indicator-inline">
+                        <div class="typing-dots">
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                bubbleDiv.innerHTML = formatResponse(message.content);
+            }
+            
+            contentDiv.appendChild(bubbleDiv);
+            
+            if (message.role === 'assistant') {
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'copy-btn';
+                copyBtn.onclick = () => copyMessage(message.content, message.id);
+                copyBtn.innerHTML = `
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                        <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                    </svg>
+                `;
+                contentDiv.appendChild(copyBtn);
+                
+                // Add completion indicator if message is complete
+                if (message.isComplete) {
+                    const completionIndicator = document.createElement('div');
+                    completionIndicator.className = 'completion-indicator';
+                    completionIndicator.innerHTML = `
+                        <span>Completed</span>
+                        <i class="fas fa-check-circle"></i>
+                    `;
+                    contentDiv.appendChild(completionIndicator);
+                }
+            }
+            
+            messageDiv.appendChild(avatarDiv);
+            messageDiv.appendChild(contentDiv);
+            
+            return messageDiv;
+        }
+
+        function createTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'typing-indicator';
+            typingDiv.id = 'typingIndicator';
+            
+            typingDiv.innerHTML = `
+                <div class="message-avatar assistant">AI</div>
+                <div class="typing-bubble">
+                    <div class="typing-dots">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                    <span style="color: #94a3b8; margin-left: 10px;">Thinking...</span>
+                </div>
+            `;
+            
+            return typingDiv;
+        }
+
+        // WebSocket connection to LLM
+        function connectToLLM(message, messageId) {
+            return new Promise((resolve, reject) => {
+                // Create WebSocket connection
+                try {
+                    socket = new WebSocket("ws://localhost:8000/ws/llm");
+
+                    
+                    socket.onopen = () => {
+                        isConnected = true;
+                        updateConnectionStatus();
+                        
+                        // Send the user message to the LLM
+                        socket.send(message);
+                    };
+                    
+                    socket.onmessage = (event) => {
+                        const content = event.data;
+                        
+                        // Update the current message
+                        const chat = getCurrentChat();
+                        const messageIndex = chat.messages.findIndex(m => m.id === messageId);
+                        if (messageIndex === -1) return;
+                        
+                        // Remove typing indicator if this is the first content
+                        if (chat.messages[messageIndex].content === '') {
+                            const messageElement = document.getElementById(`message-${messageId}`);
+                            if (messageElement) {
+                                const typingIndicator = messageElement.querySelector('.typing-indicator-inline');
+                                if (typingIndicator) {
+                                    typingIndicator.remove();
+                                }
+                            }
+                        }
+                        
+                        // Check for completion marker
+                        if (content.includes("[DONE]") || content.includes("✅ Done")) {
+                            // Mark message as complete
+                            chat.messages[messageIndex].isComplete = true;
+                            chat.messages[messageIndex].content = chat.messages[messageIndex].content.replace('[DONE]', '').replace('✅ Done', '');
+                            
+                            // Update the UI
+                            const messageElement = document.getElementById(`message-${messageId}`);
+                            if (messageElement) {
+                                const bubble = messageElement.querySelector('.message-bubble');
+                                if (bubble) {
+                                    bubble.innerHTML = formatResponse(chat.messages[messageIndex].content);
+                                }
+                                
+                                // Add completion indicator
+                                const completionIndicator = document.createElement('div');
+                                completionIndicator.className = 'completion-indicator';
+                                completionIndicator.innerHTML = `
+                                    <span>Completed</span>
+                                    <i class="fas fa-check-circle"></i>
+                                `;
+                                messageElement.querySelector('.message-content').appendChild(completionIndicator);
+                            }
+                            
+                            // Close connection and resolve
+                            socket.close();
+                            resolve(chat.messages[messageIndex].content);
+                        } else {
+                            // Normal content update
+                            chat.messages[messageIndex].content += content;
+                            
+                            // Update the UI
+                            const messageElement = document.getElementById(`message-${messageId}`);
+                            if (messageElement) {
+                                const bubble = messageElement.querySelector('.message-bubble');
+                                if (bubble) {
+                                    bubble.innerHTML = formatResponse(chat.messages[messageIndex].content);
+                                }
+                            }
+                        }
+                    };
+                    
+                    socket.onerror = (error) => {
+                        isConnected = false;
+                        updateConnectionStatus();
+                        console.error('WebSocket error:', error);
+                        reject('WebSocket connection error');
+                    };
+                    
+                    socket.onclose = (event) => {
+                        isConnected = false;
+                        updateConnectionStatus();
+                        if (event.code !== 1000) {
+                            reject('WebSocket closed unexpectedly');
+                        }
+                    };
+                } catch (error) {
+                    console.error('Error creating WebSocket:', error);
+                    reject('Failed to connect to LLM');
+                }
+            });
+        }
+
+        // Message handling
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message || isLoading) return;
+            
+            let currentChat = getCurrentChat();
+            
+            // Create new chat if none exists
+            if (!currentChat) {
+                createNewChat();
+                currentChat = getCurrentChat();
+            }
+            
+            // If this is a new chat with default title, rename it based on the user message
+            if (currentChat.title === 'New Chat' && currentChat.messages.length === 0) {
+                renameChatBasedOnMessage(currentChat.id, message);
+            }
+            
+            // Add user message
+            const userMessage = {
+                id: Date.now().toString(),
+                content: message,
+                role: 'user',
+                timestamp: new Date().toISOString(),
+                isComplete: true
+            };
+            
+            currentChat.messages.push(userMessage);
+            
+            // Create a placeholder for the AI response
+            const aiMessageId = (Date.now() + 1).toString();
+            const aiMessage = {
+                id: aiMessageId,
+                content: '',
+                role: 'assistant',
+                timestamp: new Date().toISOString(),
+                isComplete: false
+            };
+            
+            currentChat.messages.push(aiMessage);
+            currentChat.status = 'processing';
+
+            // Clear input and update UI
+            input.value = '';
+            adjustTextareaHeight(input);
+            isLoading = true;
+            generationStopped = false;
+            updateSendButton();
+            
+            // Show stop button and hide send button
+            document.getElementById('stopBtn').style.display = 'flex';
+            document.getElementById('sendBtn').style.display = 'none';
+
+            saveChatsToStorage();
+            updateChatHistory();
+            updateMessagesDisplay();
+            
+            try {
+                // Get response from LLM
+                await connectToLLM(message, aiMessageId);
+                
+                // Update the AI message
+                const chat = getCurrentChat();
+                const messageIndex = chat.messages.findIndex(m => m.id === aiMessageId);
+                if (messageIndex !== -1) {
+                    chat.messages[messageIndex].isComplete = true;
+                }
+                
+                chat.status = 'completed';
+                
+            } catch (error) {
+                console.error('Error getting response:', error);
+                
+                // Update the AI message with an error
+                const chat = getCurrentChat();
+                const messageIndex = chat.messages.findIndex(m => m.id === aiMessageId);
+                if (messageIndex !== -1 && !generationStopped) {
+                    chat.messages[messageIndex].content = "Sorry, I couldn't connect to the LLM. Please check your connection and try again.";
+                    chat.messages[messageIndex].isComplete = true;
+                }
+                chat.status = 'error';
+                showNotification("Failed to connect to LLM", "error");
+            } finally {
+                // Clean up
+                isLoading = false;
+                document.getElementById('stopBtn').style.display = 'none';
+                document.getElementById('sendBtn').style.display = 'flex';
+                updateSendButton();
+                
+                // Remove typing indicator if it still exists
+                const typingIndicator = document.getElementById('typingIndicator');
+                if (typingIndicator) {
+                    typingIndicator.remove();
+                }
+                
+                saveChatsToStorage();
+                updateChatHistory();
+                updateMessagesDisplay();
+            }
+        }
+        
+        function stopGeneration() {
+            generationStopped = true;
+            
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.close();
+            }
+            
+            const chat = getCurrentChat();
+            if (chat) {
+                chat.status = 'stopped';
+                
+                // Mark the last message as complete if it's from the assistant
+                if (chat.messages.length > 0) {
+                    const lastMessage = chat.messages[chat.messages.length - 1];
+                    if (lastMessage.role === 'assistant') {
+                        lastMessage.isComplete = true;
+                        
+                        // Remove typing indicator if still present
+                        const messageElement = document.getElementById(`message-${lastMessage.id}`);
+                        if (messageElement) {
+                            const typingIndicator = messageElement.querySelector('.typing-indicator-inline');
+                            if (typingIndicator) {
+                                typingIndicator.remove();
+                            }
+                        }
+                    }
+                }
+            }
+            
+            showNotification("Generation stopped by user", "warning");
+            
+            isLoading = false;
+            document.getElementById('stopBtn').style.display = 'none';
+            document.getElementById('sendBtn').style.display = 'flex';
+            updateSendButton();
+            
+            saveChatsToStorage();
+            updateChatHistory();
+            updateMessagesDisplay();
+        }
+
+        // Format the response with proper code handling
+        function formatResponse(text) {
+            return text
+                .replace(/\n/g, '<br>')
+                .replace(/  /g, ' &nbsp;')
+                .replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;')
+                .replace(/```([\s\S]*?)```/g, (match, code) => {
+                    return `<pre><code>${code.trim()}</code></pre>`;
+                })
+                .replace(/`([^`]+)`/g, '<code>$1</code>');
+        }
+
+        // Voice recognition
+        function toggleVoiceRecognition() {
+            if (!recognition) {
+                showNotification('Speech recognition is not supported in your browser.', 'warning');
+                return;
+            }
+            
+            if (isListening) {
+                recognition.stop();
+                setListening(false);
+                document.getElementById('voiceIndicator').classList.remove('active');
+            } else {
+                recognition.start();
+                setListening(true);
+                document.getElementById('voiceIndicator').classList.add('active');
+            }
+        }
+
+        function setListening(listening) {
+            isListening = listening;
+            const voiceBtn = document.getElementById('voiceBtn');
+            
+            if (listening) {
+                voiceBtn.classList.add('listening');
+                voiceBtn.innerHTML = `
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 9h6v6H9z"/>
+                    </svg>
+                `;
+            } else {
+                voiceBtn.classList.remove('listening');
+                voiceBtn.innerHTML = `
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                        <line x1="12" x2="12" y1="19" y2="22"/>
+                        <line x1="8" x2="16" y1="22" y2="22"/>
+                    </svg>
+                `;
+            }
+        }
+
+        // Utility functions
+        function copyMessage(content, messageId) {
+            const plainText = content.replace(/<br>/g, '\n')
+                                     .replace(/&nbsp;/g, ' ')
+                                     .replace(/<[^>]*>/g, '');
+            
+            navigator.clipboard.writeText(plainText).then(() => {
+                showNotification("Message copied to clipboard!", "success");
+            }).catch(err => {
+                showNotification("Failed to copy message", "error");
+                console.error('Failed to copy message:', err);
+            });
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function adjustTextareaHeight(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
+        }
+
+        function updateSendButton() {
+            const sendBtn = document.getElementById('sendBtn');
+            const input = document.getElementById('messageInput');
+            
+            sendBtn.disabled = !input.value.trim() || isLoading;
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('messagesContainer');
+            // Use requestAnimationFrame to ensure proper scrolling
+            requestAnimationFrame(() => {
+                container.scrollTop = container.scrollHeight;
+            });
+        }
+
+        function toggleSidebar() {
+            sidebarOpen = !sidebarOpen;
+            const sidebar = document.getElementById('sidebar');
+            
+            if (sidebarOpen) {
+                sidebar.classList.remove('collapsed');
+            } else {
+                sidebar.classList.add('collapsed');
+            }
+        }
+
+        function formatDate(date) {
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins} min ago`;
+            
+            const diffHours = Math.floor(diffMins / 60);
+            if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+            
+            return date.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
+        
+        // Show notification
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'warning' ? 'exclamation-triangle' : 
+                                  type === 'success' ? 'check-circle' : 
+                                  type === 'error' ? 'times-circle' : 'info-circle'}"></i>
+                <span>${message}</span>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
+            }, 8000);
+        }
+
+        // Event listeners
+        document.getElementById('messageInput').addEventListener('input', function() {
+            updateSendButton();
+        });
+
+        // Initialize app when page loads
+        document.addEventListener('DOMContentLoaded', init);
+
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
+</body>
+</html>
