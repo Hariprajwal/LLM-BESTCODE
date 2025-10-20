@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Starify - AI Coding Assistant</title>
+    <link rel="stylesheet" href="llm.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Exit and Minimize button styles */
+        .nav-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .exit-btn, .minimize-btn {
+            background: #dc2626;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .minimize-btn {
+            background: #f59e0b;
+        }
+        
+        .minimize-btn:hover {
+            background: #d97706;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+        }
+        
+        .exit-btn:hover {
+            background: #b91c1c;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+        }
+        
+        .exit-btn:active, .minimize-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Minimized state styles */
+        .minimized {
+            width: 400px !important;
+            height: 150px !important;
+            position: fixed !important;
+            bottom: 20px !important;
+            right: 20px !important;
+            border-radius: 12px !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+            overflow: hidden !important;
+            z-index: 10000 !important;
+            resize: both !important;
+            min-width: 350px !important;
+            min-height: 120px !important;
+        }
+        
+        .minimized .main-chat {
+            display: none !important;
+        }
+        
+        .minimized .minimized-view {
+            display: flex !important;
+        }
+        
+        .minimized-view {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            padding: 15px;
+            background: rgba(15, 23, 42, 0.95);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .minimized-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .minimized-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #60a5fa;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .minimized-controls {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .minimized-control-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 4px;
+            color: white;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 10px;
+            transition: all 0.2s ease;
+        }
+        
+        .minimized-control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .minimized-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .minimized-message {
+            font-size: 13px;
+            color: #cbd5e1;
+            margin-bottom: 12px;
+        }
+        
+        .restore-btn {
+            background: #60a5fa;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .restore-btn:hover {
+            background: #3b82f6;
+            transform: translateY(-1px);
+        }
+
+        /* Logo styling from Smart Code Hub */
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+        }
+
+        .logo-icon {
+            position: relative;
+        }
+
+        .logo-icon i {
+            width: 1.6rem;
+            height: 1.6rem;
+            color: #60a5fa;
+            transition: all 0.3s ease;
+        }
+
+        .logo-container:hover .logo-icon i {
+            color: #93c5fd;
+            transform: rotate(12deg) scale(1.1);
+        }
+
+        .logo-glow {
+            position: absolute;
+            inset: 0;
+            background-color: rgba(96, 165, 250, 0.2);
+            border-radius: 50%;
+            filter: blur(12px);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .logo-container:hover .logo-glow {
+            opacity: 1;
+        }
+
+        .logo-text {
+            display: flex;
+            align-items: center;
+        }
+
+        .logo-text span {
+            font-size: 1.1rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #60a5fa, #a78bfa, #60a5fa);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .logo-dot {
+            width: 0.4rem;
+            height: 0.4rem;
+            background-color: #34d399;
+            border-radius: 50%;
+            margin-left: 0.4rem;
+            animation: bounce 1s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+
+        /* Auth status indicator */
+        .auth-status {
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .auth-status.connected {
+            background: #10b98120;
+            border: 1px solid #10b981;
+            color: #10b981;
+        }
+        
+        .auth-status.error {
+            background: #ef444420;
+            border: 1px solid #ef4444;
+            color: #ef4444;
+        }
+        
+        .auth-status.warning {
+            background: #f59e0b20;
+            border: 1px solid #f59e0b;
+            color: #f59e0b;
+        }
+
+        /* Message bubble text alignment fix */
+        .message-bubble {
+            white-space: normal;
+            word-wrap: break-word;
+            text-align: left;
+        }
+
+        /* Code blocks - Hittesh layer no white borders */
+        .message-bubble pre {
+            background: rgba(30, 30, 35, 0.95);
+            border: 1px solid rgba(59, 130, 246, 0.15);
+            position: relative;
+        }
+
+        .message-bubble pre code {
+            background: transparent;
+            border: none;
+            color: #f8f8f2;
+        }
+
+        .message-bubble code {
+            background: rgba(45, 45, 45, 0.9);
+            border: none;
+            color: #f8f8f2;
+        }
+
+        /* Copy button inside code block */
+        .code-copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 6px;
+            color: #60a5fa;
+            cursor: pointer;
+            padding: 6px 10px;
+            font-size: 12px;
+            opacity: 0;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .message-bubble pre:hover .code-copy-btn {
+            opacity: 1;
+        }
+
+        .code-copy-btn:hover {
+            background: rgba(0, 0, 0, 0.7);
+            border-color: rgba(96, 165, 250, 0.6);
+        }
+
+        /* OVERLAY MODE STYLES */
+        .chat-overlay {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 350px;
+            height: 500px;
+            background: rgba(15, 23, 42, 0.98);
+            border: 1px solid rgba(96, 165, 250, 0.2);
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            display: none;
+            flex-direction: column;
+            z-index: 10000;
+            resize: both;
+            min-width: 250px;
+            min-height: 300px;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .chat-overlay.active {
+            display: flex;
+        }
+
+        .overlay-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(15, 23, 42, 0.95);
+            border-bottom: 1px solid rgba(96, 165, 250, 0.1);
+            cursor: move;
+            user-select: none;
+        }
+
+        .overlay-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #60a5fa;
+        }
+
+        .overlay-controls {
+            display: flex;
+            gap: 6px;
+        }
+
+        .overlay-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 4px;
+            color: #60a5fa;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s ease;
+        }
+
+        .overlay-btn:hover {
+            background: rgba(96, 165, 250, 0.2);
+        }
+
+        .overlay-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .overlay-messages .empty-state-content {
+            padding: 10px;
+        }
+
+        .overlay-messages .empty-state-content h2 {
+            font-size: 12px;
+            margin: 8px 0 4px;
+        }
+
+        .overlay-messages .empty-state-content p {
+            font-size: 10px;
+        }
+
+        .overlay-messages .empty-state-content ul {
+            font-size: 9px;
+            margin-top: 8px;
+        }
+
+        .overlay-messages .message-avatar {
+            width: 20px;
+            height: 20px;
+            font-size: 9px;
+        }
+
+        .overlay-messages .message-bubble {
+            font-size: 11px;
+            padding: 8px 10px;
+        }
+
+        .overlay-messages .message-content {
+            max-width: 100%;
+        }
+
+        .overlay-input-area {
+            padding: 8px;
+            border-top: 1px solid rgba(96, 165, 250, 0.1);
+            background: rgba(15, 23, 42, 0.95);
+        }
+
+        .overlay-input-wrapper {
+            display: flex;
+            gap: 4px;
+        }
+
+        .overlay-input-field {
+            flex: 1;
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(96, 165, 250, 0.2);
+            border-radius: 6px;
+            padding: 6px 8px;
+            color: #e2e8f0;
+            font-size: 11px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            resize: none;
+            max-height: 50px;
+        }
+
+        .overlay-input-field::placeholder {
+            color: #64748b;
+        }
+
+        .overlay-send-btn, .overlay-stop-btn, .overlay-voice-btn {
+            background: #3b82f6;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 10px;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .overlay-send-btn:hover, .overlay-voice-btn:hover {
+            background: #2563eb;
+        }
+
+        .overlay-stop-btn {
+            background: #ef4444;
+            display: none;
+        }
+
+        .overlay-stop-btn:hover {
+            background: #dc2626;
+        }
+
+        .main-app.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- FULLSCREEN APP -->
+    <div class="main-app" id="mainApp">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo-container">
+                <div class="logo-icon">
+                    <i data-lucide="code-2"></i>
+                    <div class="logo-glow"></div>
+                </div>
+                <div class="logo-text">
+                    <span>Smart Code Hub</span>
+                    <div class="logo-dot"></div>
+                </div>
+            </div>
+            
+            <nav class="nav-links">
+                <div class="nav-buttons">
+                    <button class="minimize-btn" id="minimizeBtn" onclick="minimizeToOverlay()">
+                        <i class="fas fa-window-minimize"></i>
+                        Minimize
+                    </button>
+                    <button class="exit-btn" onclick="goBack()">
+                        <i class="fas fa-arrow-left"></i>
+                        Exit
+                    </button>
+                </div>
+            </nav>
+        </div>
+
+        <!-- Auth Status -->
+        <div class="auth-status" id="authStatus"></div>
+
+        <!-- Voice Indicator -->
+        <div class="voice-indicator" id="voiceIndicator">
+            <div class="voice-pulse" style="background: var(--blue-400);"></div>
+            <span>Listening... Speak now</span>
+        </div>
+
+        <div class="chat-container" id="chatContainer">
+            <!-- Main Chat Area -->
+            <div class="main-chat">
+                <div class="chat-header">
+                    <h1 class="chat-title">Starify AI</h1>
+                </div>
+
+                <div class="messages-container" id="messagesContainer">
+                    <div class="empty-state" id="emptyState">
+                        <div class="empty-state-content">
+                            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" style="margin: 0 auto 20px;">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                <path d="M13 8H7"/>
+                                <path d="M17 12H7"/>
+                            </svg>
+                            <h2>How can I help you code today?</h2>
+                            <p>Start a conversation by typing a message or using voice input</p>
+                            <p style="margin-top: 25px; color: #93c5fd; font-weight: 500;">Try asking:</p>
+                            <ul>
+                                <li>"Explain how quicksort works with Python examples"</li>
+                                <li>"Fix this JavaScript function that's not working"</li>
+                                <li>"How to implement a binary search tree in C++?"</li>
+                                <li>"Debug this Python code for matrix multiplication"</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="messages-list" id="messagesList" style="display: none;">
+                        <!-- Messages will be populated here -->
+                    </div>
+                </div>
+
+                <div class="input-area">
+                    <div class="input-container">
+                        <div class="input-wrapper">
+                            <div class="input-field-container">
+                                <textarea 
+                                    class="input-field" 
+                                    id="messageInput" 
+                                    placeholder="Message Starify or use voice input..." 
+                                    rows="1"
+                                    onkeydown="handleKeyPress(event)"
+                                    oninput="adjustTextareaHeight(this)"
+                                ></textarea>
+                                <div class="input-actions">
+                                    <button class="voice-btn" id="voiceBtn" onclick="toggleVoiceRecognition()">
+                                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                                            <line x1="12" x2="12" y1="19" y2="22"/>
+                                            <line x1="8" x2="16" y1="22" y2="22"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <button class="stop-btn" id="stopBtn" onclick="stopGeneration()">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="6" y="6" width="12" height="12" rx="1" ry="1"/>
+                                </svg>
+                            </button>
+                            <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 2 11 13"/>
+                                    <path d="M22 2 15 22 11 13 2 9z"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="input-help">
+                            Press Enter to send, Shift+Enter for new line. Click the mic to use voice input.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- OVERLAY CHAT -->
+    <div class="chat-overlay" id="chatOverlay">
+        <div class="overlay-header" id="overlayDragHandle">
+            <div class="overlay-title">Starify AI</div>
+            <div class="overlay-controls">
+                <button class="overlay-btn" onclick="maximizeFromOverlay()" title="Maximize">
+                    <i class="fas fa-expand"></i>
+                </button>
+                <button class="overlay-btn" onclick="closeOverlay()" title="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="overlay-messages" id="overlayMessagesContainer">
+            <div class="empty-state" id="overlayEmptyState">
+                <div class="empty-state-content">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <h2>How can I help?</h2>
+                    <p>Start chatting</p>
+                </div>
+            </div>
+            <div class="messages-list" id="overlayMessagesList" style="display: none;"></div>
+        </div>
+
+        <div class="overlay-input-area">
+            <div class="overlay-input-wrapper">
+                <textarea 
+                    class="overlay-input-field" 
+                    id="overlayInput" 
+                    placeholder="Message..." 
+                    rows="1"
+                    onkeydown="handleOverlayKeyPress(event)"
+                    oninput="adjustOverlayHeight(this)"
+                ></textarea>
+                <button class="overlay-voice-btn" id="overlayVoiceBtn" onclick="toggleOverlayVoice()">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <button class="overlay-stop-btn" id="overlayStopBtn" onclick="stopOverlayGeneration()">
+                    <i class="fas fa-stop"></i>
+                </button>
+                <button class="overlay-send-btn" id="overlaySendBtn" onclick="sendOverlayMessage()">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let messages = [];
+        let isLoading = false;
+        let isListening = false;
+        let recognition = null;
+        let socket = null;
+        let isConnected = false;
+        let generationStopped = false;
+        let isOverlayMode = false;
+        let isDragging = false;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+
+        // NEW: Session validation before connecting
+        async function validateSessionBeforeConnect() {
+            try {
+                console.log("🔐 Validating session before WebSocket connection...");
+                
+                // Test the session with the LLM server's debug endpoint
+                const response = await fetch('http://localhost:8000/debug-session', {
+                    credentials: 'include' // This sends cookies
+                });
+                
+                const result = await response.json();
+                console.log("🔐 Session validation result:", result);
+                
+                if (result.authenticated && result.user) {
+                    showAuthStatus(`✅ Authenticated as: ${result.user.full_name}`, 'connected');
+                    return true;
+                } else {
+                    showAuthStatus('❌ Not authenticated. Please login to Smart Code Hub first.', 'error');
+                    return false;
+                }
+            } catch (error) {
+                console.error('🔐 Session validation error:', error);
+                return false;
+            }
+        }
+
+        // NEW: Show authentication status
+        function showAuthStatus(message, type) {
+            const authStatus = document.getElementById('authStatus');
+            authStatus.textContent = message;
+            authStatus.className = `auth-status ${type}`;
+            authStatus.style.display = 'block';
+            
+            if (type === 'error' || type === 'warning') {
+                // Hide after 10 seconds for errors/warnings
+                setTimeout(() => {
+                    authStatus.style.display = 'none';
+                }, 10000);
+            }
+        }
+
+        // NEW FUNCTION: Go back to previous page
+        function goBack() {
+            if (document.referrer) {
+                window.history.back();
+            } else {
+                window.location.href = '/';
+            }
+        }
+
+        // NEW OVERLAY FUNCTIONS
+        function minimizeToOverlay() {
+            isOverlayMode = true;
+            document.getElementById('mainApp').classList.add('hidden');
+            document.getElementById('chatOverlay').classList.add('active');
+            updateOverlayDisplay();
+        }
+
+        function maximizeFromOverlay() {
+            isOverlayMode = false;
+            document.getElementById('mainApp').classList.remove('hidden');
+            document.getElementById('chatOverlay').classList.remove('active');
+            updateMessagesDisplay();
+        }
+
+        function closeOverlay() {
+            if (document.referrer) {
+                window.history.back();
+            } else {
+                window.location.href = '/';
+            }
+        }
+
+        // Setup overlay dragging
+        function setupOverlayDrag() {
+            const header = document.getElementById('overlayDragHandle');
+            const overlay = document.getElementById('chatOverlay');
+
+            header.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                dragOffsetX = e.clientX - overlay.getBoundingClientRect().left;
+                dragOffsetY = e.clientY - overlay.getBoundingClientRect().top;
+                header.style.cursor = 'grabbing';
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                overlay.style.left = (e.clientX - dragOffsetX) + 'px';
+                overlay.style.top = (e.clientY - dragOffsetY) + 'px';
+                overlay.style.right = 'auto';
+                overlay.style.bottom = 'auto';
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+                header.style.cursor = 'move';
+            });
+        }
+
+        // Initialize app
+        async function init() {
+            initSpeechRecognition();
+            setupOverlayDrag();
+            document.getElementById('messageInput').focus();
+            
+            // NEW: Hide minimize button if page was opened directly
+            if (!document.referrer) {
+                document.getElementById('minimizeBtn').style.display = 'none';
+            }
+            
+            // NEW: Validate session before allowing chat
+            await validateSessionBeforeConnect();
+        }
+
+        // Initialize speech recognition
+        function initSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    if (isOverlayMode) {
+                        document.getElementById('overlayInput').value = transcript;
+                        adjustOverlayHeight(document.getElementById('overlayInput'));
+                    } else {
+                        document.getElementById('messageInput').value = transcript;
+                        adjustTextareaHeight(document.getElementById('messageInput'));
+                    }
+                    setListening(false);
+                    
+                    updateSendButton();
+                    
+                    if (isOverlayMode) {
+                        document.getElementById('overlayInput').focus();
+                        document.getElementById('overlayInput').setSelectionRange(
+                            document.getElementById('overlayInput').value.length, 
+                            document.getElementById('overlayInput').value.length
+                        );
+                    } else {
+                        document.getElementById('messageInput').focus();
+                        document.getElementById('messageInput').setSelectionRange(
+                            document.getElementById('messageInput').value.length, 
+                            document.getElementById('messageInput').value.length
+                        );
+                    }
+                    
+                    document.getElementById('voiceIndicator').classList.remove('active');
+                };
+
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error', event.error);
+                    setListening(false);
+                    showNotification('Voice recognition error: ' + event.error, 'error');
+                    document.getElementById('voiceIndicator').classList.remove('active');
+                };
+
+                recognition.onend = function() {
+                    setListening(false);
+                    document.getElementById('voiceIndicator').classList.remove('active');
+                };
+            } else {
+                showNotification('Speech recognition is not supported in your browser', 'warning');
+            }
+        }
+
+        // Toggle voice for overlay
+        function toggleOverlayVoice() {
+            if (!recognition) {
+                showNotification('Speech recognition is not supported in your browser.', 'warning');
+                return;
+            }
+            
+            if (isListening) {
+                recognition.stop();
+                setListening(false);
+                document.getElementById('voiceIndicator').classList.remove('active');
+            } else {
+                recognition.start();
+                setListening(true);
+                document.getElementById('voiceIndicator').classList.add('active');
+            }
+        }
+
+        function setListening(listening) {
+            isListening = listening;
+            const voiceBtn = document.getElementById('voiceBtn');
+            const overlayVoiceBtn = document.getElementById('overlayVoiceBtn');
+            
+            if (listening) {
+                if (voiceBtn) voiceBtn.classList.add('listening');
+                if (overlayVoiceBtn) overlayVoiceBtn.classList.add('listening');
+                voiceBtn.innerHTML = `
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 9h6v6H9z"/>
+                    </svg>
+                `;
+            } else {
+                if (voiceBtn) voiceBtn.classList.remove('listening');
+                if (overlayVoiceBtn) overlayVoiceBtn.classList.remove('listening');
+                voiceBtn.innerHTML = `
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                        <line x1="12" x2="12" y1="19" y2="22"/>
+                        <line x1="8" x2="16" y1="22" y2="22"/>
+                    </svg>
+                `;
+            }
+        }
+
+        // REPLACE the connectToLLM function with this updated version
+        function connectToLLM(message, messageId) {
+            return new Promise((resolve, reject) => {
+                try {
+                    console.log("=== CONNECTING ===");
+                    console.log("Message:", message);
+                    console.log("Target:", "ws://localhost:8000/ws/llm");
+                    
+                    socket = new WebSocket("ws://localhost:8000/ws/llm");
+                    
+                    socket.onopen = () => {
+                        console.log("✅ WebSocket OPEN");
+                        isConnected = true;
+                        
+                        // Send message immediately
+                        console.log("📤 Sending message to server");
+                        socket.send(message);
+                        console.log("✅ Message sent");
+                    };
+                    
+                    socket.onmessage = (event) => {
+                        const msg = JSON.parse(event.data);
+                        console.log("📨 Received message:", msg); // DEBUG LOG
+                        
+                        if (msg.type === "stream") {
+                            // Append this token to your output
+                            const messageIndex = messages.findIndex(m => m.id === messageId);
+                            if (messageIndex === -1) {
+                                console.error("❌ Message not found:", messageId);
+                                return;
+                            }
+                            
+                            // Remove typing indicator if first time
+                            if (messages[messageIndex].content === '') {
+                                const messageElement = document.getElementById(`message-${messageId}`);
+                                if (messageElement) {
+                                    const typing = messageElement.querySelector('.typing-indicator-inline');
+                                    if (typing) typing.remove();
+                                }
+                            }
+                            
+                            // Append the content
+                            messages[messageIndex].content += msg.content;
+                            
+                            // Update display in real-time
+                            const messageElement = document.getElementById(`message-${messageId}`);
+                            if (messageElement) {
+                                const bubble = messageElement.querySelector('.message-bubble');
+                                if (bubble) {
+                                    bubble.innerHTML = formatResponse(messages[messageIndex].content);
+                                }
+                            }
+                            
+                            if (isOverlayMode) {
+                                scrollOverlayToBottom();
+                            } else {
+                                scrollToBottom();
+                            }
+                        } else if (msg.type === "complete") {
+                            console.log("✅ Response complete!");
+                            console.log("Response content:", msg.content); // DEBUG LOG
+                            
+                            const messageIndex = messages.findIndex(m => m.id === messageId);
+                            if (messageIndex !== -1) {
+                                // Set the complete message content
+                                messages[messageIndex].content = msg.content;
+                                messages[messageIndex].isComplete = true;
+                                
+                                // Update UI to display the complete message
+                                const messageElement = document.getElementById(`message-${messageId}`);
+                                if (messageElement) {
+                                    const bubble = messageElement.querySelector('.message-bubble');
+                                    if (bubble) {
+                                        bubble.innerHTML = formatResponse(msg.content);
+                                    }
+                                    
+                                    // Add completion indicator
+                                    const content = messageElement.querySelector('.message-content');
+                                    if (content && !content.querySelector('.completion-indicator')) {
+                                        const indicator = document.createElement('div');
+                                        indicator.className = 'completion-indicator';
+                                        indicator.innerHTML = '<span>Completed</span><i class="fas fa-check-circle"></i>';
+                                        content.appendChild(indicator);
+                                    }
+                                }
+                            }
+                            
+                            // Close the connection
+                            socket.close(1000, "Response complete");
+                            resolve(msg.content);
+                        } else if (msg.type === "error") {
+                            console.error("❌ Error:", msg.content);
+                            
+                            const messageIndex = messages.findIndex(m => m.id === messageId);
+                            if (messageIndex !== -1) {
+                                messages[messageIndex].content = "Error: " + msg.content;
+                                messages[messageIndex].isComplete = true;
+                                
+                                // Update the message element
+                                const messageElement = document.getElementById(`message-${messageId}`);
+                                if (messageElement) {
+                                    const bubble = messageElement.querySelector('.message-bubble');
+                                    if (bubble) {
+                                        bubble.innerHTML = formatResponse(messages[messageIndex].content);
+                                    }
+                                }
+                            }
+                            
+                            reject(msg.content);
+                        }
+                    };
+                    
+                    socket.onerror = (error) => {
+                        console.error("❌ WebSocket ERROR:", error);
+                        isConnected = false;
+                        reject("WebSocket connection error");
+                    };
+                    
+                    socket.onclose = (event) => {
+                        console.log(`🔌 WebSocket CLOSED: Code=${event.code}, Reason=${event.reason}`);
+                        isConnected = false;
+                        
+                        // If it closed with code 1000, that's normal (we closed it)
+                        if (event.code !== 1000 && !generationStopped) {
+                            const messageIndex = messages.findIndex(m => m.id === messageId);
+                            if (messageIndex !== -1 && messages[messageIndex].content.length > 0) {
+                                // We got some content before closing, mark as complete
+                                messages[messageIndex].isComplete = true;
+                                resolve(messages[messageIndex].content);
+                            } else {
+                                reject("Connection closed before receiving response");
+                            }
+                        }
+                    };
+                    
+                } catch (error) {
+                    console.error("❌ FATAL ERROR:", error);
+                    reject("Failed to connect: " + error.message);
+                }
+            });
+        }
+
+        // Message handling
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message || isLoading) return;
+            
+            // Add user message
+            const userMessage = {
+                id: Date.now().toString(),
+                content: message,
+                role: 'user',
+                timestamp: new Date().toISOString(),
+                isComplete: true
+            };
+            
+            messages.push(userMessage);
+            
+            // Create a placeholder for the AI response
+            const aiMessageId = (Date.now() + 1).toString();
+            const aiMessage = {
+                id: aiMessageId,
+                content: '',
+                role: 'assistant',
+                timestamp: new Date().toISOString(),
+                isComplete: false
+            };
+            
+            messages.push(aiMessage);
+
+            // Clear input and update UI
+            input.value = '';
+            adjustTextareaHeight(input);
+            isLoading = true;
+            generationStopped = false;
+            updateSendButton();
+            
+            // Show stop button and hide send button
+            document.getElementById('stopBtn').style.display = 'flex';
+            document.getElementById('sendBtn').style.display = 'none';
+
+            updateMessagesDisplay();
+            
+            try {
+                // Get response from LLM
+                await connectToLLM(message, aiMessageId);
+                
+                // Update the AI message
+                const messageIndex = messages.findIndex(m => m.id === aiMessageId);
+                if (messageIndex !== -1) {
+                    messages[messageIndex].isComplete = true;
+                }
+                
+            } catch (error) {
+                console.error('Error getting response:', error);
+                
+                // Update the AI message with an error
+                const messageIndex = messages.findIndex(m => m.id === aiMessageId);
+                if (messageIndex !== -1 && !generationStopped) {
+                    messages[messageIndex].content = "Sorry, I couldn't connect to the  Starify server. " + error;
+                    messages[messageIndex].isComplete = true;
+                }
+                showNotification("Connection error: " + error, "error");
+            } finally {
+                // Clean up
+                isLoading = false;
+                document.getElementById('stopBtn').style.display = 'none';
+                document.getElementById('sendBtn').style.display = 'flex';
+                updateSendButton();
+                
+                // Remove typing indicator if it still exists
+                const typingIndicator = document.getElementById('typingIndicator');
+                if (typingIndicator) {
+                    typingIndicator.remove();
+                }
+                
+                updateMessagesDisplay();
+            }
+        }
+
+        // Send message (overlay)
+        async function sendOverlayMessage() {
+            const input = document.getElementById('overlayInput');
+            const message = input.value.trim();
+
+            if (!message || isLoading) return;
+
+            const userMessage = {
+                id: Date.now().toString(),
+                content: message,
+                role: 'user',
+                timestamp: new Date().toISOString(),
+                isComplete: true
+            };
+
+            messages.push(userMessage);
+
+            const aiMessageId = (Date.now() + 1).toString();
+            const aiMessage = {
+                id: aiMessageId,
+                content: '',
+                role: 'assistant',
+                timestamp: new Date().toISOString(),
+                isComplete: false
+            };
+
+            messages.push(aiMessage);
+
+            input.value = '';
+            adjustOverlayHeight(input);
+            isLoading = true;
+            generationStopped = false;
+
+            document.getElementById('overlayStopBtn').style.display = 'flex';
+            document.getElementById('overlaySendBtn').style.display = 'none';
+
+            updateOverlayDisplay();
+
+            try {
+                await connectToLLM(message, aiMessageId);
+                const messageIndex = messages.findIndex(m => m.id === aiMessageId);
+                if (messageIndex !== -1) {
+                    messages[messageIndex].isComplete = true;
+                }
+            } catch (error) {
+                const messageIndex = messages.findIndex(m => m.id === aiMessageId);
+                if (messageIndex !== -1 && !generationStopped) {
+                    messages[messageIndex].content = "Error: " + error;
+                    messages[messageIndex].isComplete = true;
+                }
+                showNotification("Error: " + error, "error");
+            } finally {
+                isLoading = false;
+                document.getElementById('overlayStopBtn').style.display = 'none';
+                document.getElementById('overlaySendBtn').style.display = 'flex';
+                updateOverlayDisplay();
+            }
+        }
+        
+        function stopGeneration() {
+            generationStopped = true;
+            
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.close();
+            }
+            
+            // Mark the last message as complete if it's from the assistant
+            if (messages.length > 0) {
+                const lastMessage = messages[messages.length - 1];
+                if (lastMessage.role === 'assistant') {
+                    lastMessage.isComplete = true;
+                    
+                    // Remove typing indicator if still present
+                    const messageElement = document.getElementById(`message-${lastMessage.id}`);
+                    if (messageElement) {
+                        const typingIndicator = messageElement.querySelector('.typing-indicator-inline');
+                        if (typingIndicator) {
+                            typingIndicator.remove();
+                        }
+                    }
+                }
+            }
+            
+            showNotification("Generation stopped by user", "warning");
+            
+            isLoading = false;
+            document.getElementById('stopBtn').style.display = 'none';
+            document.getElementById('sendBtn').style.display = 'flex';
+            updateSendButton();
+            
+            updateMessagesDisplay();
+        }
+
+        // Stop overlay generation
+        function stopOverlayGeneration() {
+            generationStopped = true;
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.close();
+            }
+
+            if (messages.length > 0) {
+                const lastMessage = messages[messages.length - 1];
+                if (lastMessage.role === 'assistant') {
+                    lastMessage.isComplete = true;
+                }
+            }
+
+            isLoading = false;
+            document.getElementById('overlayStopBtn').style.display = 'none';
+            document.getElementById('overlaySendBtn').style.display = 'flex';
+            updateOverlayDisplay();
+        }
+
+        // Format the response with proper code handling
+        function formatResponse(text) {
+            return text
+                .replace(/\n/g, '<br>')
+                .replace(/  /g, ' &nbsp;')
+                .replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;')
+                .replace(/```([\s\S]*?)```/g, (match, code) => {
+                    const codeContent = code.trim();
+                    return `<pre style="position: relative;"><code>${codeContent}</code></pre>`;
+                })
+                .replace(/`([^`]+)`/g, '<code>$1</code>');
+        }
+
+        // Copy code function
+        function copyCode(btn) {
+            const codeBlock = btn.nextElementSibling;
+            const plainText = codeBlock.textContent;
+            
+            navigator.clipboard.writeText(plainText).then(() => {
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check"></i>Copied';
+                btn.style.background = 'rgba(16, 185, 129, 0.3)';
+                btn.style.borderColor = 'rgba(16, 185, 129, 0.6)';
+                btn.style.color = '#34d399';
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.background = 'rgba(0, 0, 0, 0.5)';
+                    btn.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+                    btn.style.color = '#60a5fa';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy code:', err);
+            });
+        }
+
+        // Voice recognition
+        function toggleVoiceRecognition() {
+            if (!recognition) {
+                showNotification('Speech recognition is not supported in your browser.', 'warning');
+                return;
+            }
+            
+            if (isListening) {
+                recognition.stop();
+                setListening(false);
+                document.getElementById('voiceIndicator').classList.remove('active');
+            } else {
+                recognition.start();
+                setListening(true);
+                document.getElementById('voiceIndicator').classList.add('active');
+            }
+        }
+
+        // Utility functions
+        function copyMessage(content, messageId) {
+            const plainText = content.replace(/<br>/g, '\n')
+                                     .replace(/&nbsp;/g, ' ')
+                                     .replace(/<[^>]*>/g, '');
+            
+            navigator.clipboard.writeText(plainText).then(() => {
+                showNotification("Message copied to clipboard!", "success");
+            }).catch(err => {
+                showNotification("Failed to copy message", "error");
+                console.error('Failed to copy message:', err);
+            });
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function handleOverlayKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendOverlayMessage();
+            }
+        }
+
+        function adjustTextareaHeight(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
+        }
+
+        function adjustOverlayHeight(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 50) + 'px';
+        }
+
+        function updateSendButton() {
+            const sendBtn = document.getElementById('sendBtn');
+            const input = document.getElementById('messageInput');
+            
+            sendBtn.disabled = !input.value.trim() || isLoading;
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('messagesContainer');
+            // Only auto-scroll if user is already at the bottom
+            const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+            if (isAtBottom) {
+                requestAnimationFrame(() => {
+                    container.scrollTop = container.scrollHeight;
+                });
+            }
+        }
+
+        function scrollOverlayToBottom() {
+            const container = document.getElementById('overlayMessagesContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function updateMessagesDisplay() {
+            const emptyState = document.getElementById('emptyState');
+            const messagesList = document.getElementById('messagesList');
+            
+            if (messages.length === 0) {
+                emptyState.style.display = 'flex';
+                messagesList.style.display = 'none';
+                messagesList.innerHTML = '';
+            } else {
+                emptyState.style.display = 'none';
+                messagesList.style.display = 'block';
+                
+                messagesList.innerHTML = '';
+                messages.forEach(message => {
+                    const messageElement = createMessageElement(message, false);
+                    messagesList.appendChild(messageElement);
+                });
+            }
+            
+            scrollToBottom();
+        }
+
+        function updateOverlayDisplay() {
+            const emptyState = document.getElementById('overlayEmptyState');
+            const messagesList = document.getElementById('overlayMessagesList');
+
+            if (messages.length === 0) {
+                emptyState.style.display = 'flex';
+                messagesList.style.display = 'none';
+            } else {
+                emptyState.style.display = 'none';
+                messagesList.style.display = 'block';
+
+                messagesList.innerHTML = '';
+                messages.forEach(message => {
+                    const messageElement = createMessageElement(message, true);
+                    messagesList.appendChild(messageElement);
+                });
+            }
+
+            scrollOverlayToBottom();
+        }
+
+        function createMessageElement(message, isOverlay) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${message.role} fade-in`;
+            messageDiv.id = `message-${message.id}`;
+            
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = `message-avatar ${message.role}`;
+            avatarDiv.textContent = message.role === 'user' ? 'U' : 'AI';
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = 'message-bubble';
+            
+            if (message.role === 'assistant' && message.content === '') {
+                bubbleDiv.innerHTML = `
+                    <div class="typing-indicator-inline">
+                        <div class="typing-dots">
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                bubbleDiv.innerHTML = formatResponse(message.content);
+                
+                // Add copy button to code blocks
+                const codeBlocks = bubbleDiv.querySelectorAll('pre');
+                codeBlocks.forEach(pre => {
+                    const btn = document.createElement('button');
+                    btn.className = 'code-copy-btn';
+                    btn.innerHTML = '<i class="fas fa-copy"></i>Copy';
+                    btn.onclick = function() { copyCode(this); };
+                    pre.style.position = 'relative';
+                    pre.appendChild(btn);
+                });
+            }
+            
+            contentDiv.appendChild(bubbleDiv);
+            
+            if (message.role === 'assistant') {
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'copy-btn';
+                copyBtn.onclick = () => copyMessage(message.content, message.id);
+                copyBtn.innerHTML = `
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                        <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                    </svg>
+                `;
+                contentDiv.appendChild(copyBtn);
+                
+                if (message.isComplete) {
+                    const completionIndicator = document.createElement('div');
+                    completionIndicator.className = 'completion-indicator';
+                    completionIndicator.innerHTML = `
+                        <span>Completed</span>
+                        <i class="fas fa-check-circle"></i>
+                    `;
+                    contentDiv.appendChild(completionIndicator);
+                }
+            }
+            
+            messageDiv.appendChild(avatarDiv);
+            messageDiv.appendChild(contentDiv);
+            
+            return messageDiv;
+        }
+        
+        // Show notification
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'warning' ? 'exclamation-triangle' : 
+                                  type === 'success' ? 'check-circle' : 
+                                  type === 'error' ? 'times-circle' : 'info-circle'}"></i>
+                <span>${message}</span>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
+            }, 3000);
+        }
+
+        // Event listeners
+        document.getElementById('messageInput').addEventListener('input', function() {
+            updateSendButton();
+        });
+
+        // Initialize app when page loads
+        document.addEventListener('DOMContentLoaded', init);
+
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
+</body>
+</html>
