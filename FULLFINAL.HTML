@@ -1159,20 +1159,37 @@
         // Quick actions
         function handleQuickAction(e, action) {
             if (action === 'summarize') {
-                // Create dynamic summary prompt based on actual conversation
-                let conversationHistory = "Please provide a concise summary of our Data Structures and Algorithms conversation:\n\n";
+                // Create FAST summary prompt using keywords from recent conversation
+                let conversationKeywords = "Summary of DSA conversation keywords: ";
                 
-                // Add the most relevant parts of the conversation (last 6-8 messages for context)
-                const recentMessages = messages.slice(-8);
+                // Extract keywords from last 4-6 messages for speed
+                const recentMessages = messages.slice(-6);
+                const keywords = new Set();
+                
                 recentMessages.forEach(msg => {
-                    const role = msg.role === 'user' ? 'User' : 'Assistant';
-                    conversationHistory += `${role}: ${msg.content}\n\n`;
+                    const words = msg.content.split(/\s+/);
+                    words.forEach(word => {
+                        const cleanWord = word.toLowerCase().replace(/[^a-z]/g, '');
+                        if (cleanWord.length > 3 && dsaTopics.some(topic => 
+                            topic.toLowerCase().includes(cleanWord) || cleanWord.includes(topic.toLowerCase()))) {
+                            keywords.add(cleanWord);
+                        }
+                    });
                 });
                 
-                conversationHistory += "Based on this conversation, please provide a brief summary of the key DSA concepts discussed, main questions asked, and important solutions or explanations provided. Focus on the most valuable learning points.";
+                // Add main DSA topics mentioned
+                dsaTopics.forEach(topic => {
+                    if (recentMessages.some(msg => 
+                        msg.content.toLowerCase().includes(topic.toLowerCase()))) {
+                        keywords.add(topic.toLowerCase());
+                    }
+                });
                 
-                // Send the summary request without showing it in the chat
-                sendSummaryRequest(conversationHistory);
+                conversationKeywords += Array.from(keywords).slice(0, 10).join(', ');
+                conversationKeywords += ". Based on these keywords, provide a concise summary of the main DSA concepts discussed, key questions asked, and important solutions provided.";
+                
+                // Send the FAST summary request
+                sendSummaryRequest(conversationKeywords);
                 return;
             }
             
